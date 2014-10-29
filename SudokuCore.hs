@@ -1,9 +1,8 @@
-module Sudoku.Core where
+module SudokuCore where
 
-import Data.List (transpose)
 import System.Random
 import Control.Monad (replicateM)
-import Data.List (sort)
+import Data.List (sort, transpose)
 
 data Square = Full Int | Empty deriving (Eq)
 
@@ -115,3 +114,34 @@ solved b = all validUnit (rows b ++ columns b ++ blocks b)
         validUnit xs | Empty `elem` xs = False
                      | otherwise       = sort (map fromFull xs) == [1..9]
         fromFull (Full x) = x
+
+valueAt :: Int -> Int -> Board -> Int
+valueAt i j (Board b) = case b !! i !! j of
+                            (Full k) -> k
+
+insertAt :: Int -> Int -> Square -> Board -> Board
+insertAt i j s (Board b) = Board (before ++ [newRow] ++ after)
+    where
+        before = take i b
+        newRow = let oldRow = b !! i in take j oldRow ++ [s] ++ drop (j + 1) oldRow
+        after  = drop (i + 1) b
+
+incrementAt :: Int -> Int -> Board -> Board
+incrementAt i j b = insertAt i j new b
+    where
+        new = Full (valueAt i j b + 1)
+
+firstEmpty :: Board -> Maybe (Int,Int)
+firstEmpty (Board b) = case [(i,j) | i <- [0..8], j <- [0..8], b !! i !! j == Empty] of
+                           []    -> Nothing
+                           (x:_) -> Just x
+
+valid :: Int -> Int -> Int -> Board -> Bool
+valid i j n b =   x `notElem` block
+               && x `notElem` row
+               && x `notElem` col
+    where
+        block = (blocks b) !! (3 * (i `div` 3) + (j `div` 3))
+        row   = rows b !! i
+        col   = columns b !! j
+        x     = Full n
