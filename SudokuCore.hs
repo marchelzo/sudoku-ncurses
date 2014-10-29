@@ -2,7 +2,7 @@ module SudokuCore where
 
 import System.Random
 import Control.Monad (replicateM)
-import Data.List (sort, transpose)
+import Data.List (sort, transpose, nub)
 
 data Square = Full Int | Empty deriving (Eq)
 
@@ -25,6 +25,9 @@ instance Random Transformation where
                        twoRandomInts g = let (x,g') = randomR (1,9) g
                                              in let (y,g'') = randomR (1,9) g'
                                                     in (x,y,g'')
+
+fromFull :: Square -> Int
+fromFull (Full x) = x
 
 shuffled :: IO Board
 shuffled = do n  <- randomRIO (300,1000)
@@ -115,9 +118,8 @@ solved b = all validUnit (rows b ++ columns b ++ blocks b)
                      | otherwise       = sort (map fromFull xs) == [1..9]
         fromFull (Full x) = x
 
-valueAt :: Int -> Int -> Board -> Int
-valueAt i j (Board b) = case b !! i !! j of
-                            (Full k) -> k
+valueAt :: Int -> Int -> Board -> Square
+valueAt i j (Board b) = b !! i !! j
 
 insertAt :: Int -> Int -> Square -> Board -> Board
 insertAt i j s (Board b) = Board (before ++ [newRow] ++ after)
@@ -129,19 +131,32 @@ insertAt i j s (Board b) = Board (before ++ [newRow] ++ after)
 incrementAt :: Int -> Int -> Board -> Board
 incrementAt i j b = insertAt i j new b
     where
-        new = Full (valueAt i j b + 1)
+        new = case valueAt i j b of
+                  Empty  -> Full 1
+                  Full 9 -> Empty
+                  Full x -> Full (x + 1)
 
-firstEmpty :: Board -> Maybe (Int,Int)
-firstEmpty (Board b) = case [(i,j) | i <- [0..8], j <- [0..8], b !! i !! j == Empty] of
-                           []    -> Nothing
-                           (x:_) -> Just x
+emptySquares :: Board -> [(Int,Int)]
+emptySquares (Board b) = [(i,j) | i <- [0..8], j <- [0..8], b !! i !! j == Empty]
 
-valid :: Int -> Int -> Int -> Board -> Bool
-valid i j n b =   x `notElem` block
-               && x `notElem` row
-               && x `notElem` col
+validMove :: Int -> Int -> Int -> Board -> Bool
+validMove i j n b =    x `notElem` block
+                    && x `notElem` row
+                    && x `notElem` col
     where
         block = (blocks b) !! (3 * (i `div` 3) + (j `div` 3))
         row   = rows b !! i
         col   = columns b !! j
         x     = Full n
+
+validState :: Board -> Bool
+validState b = all noDuplicates (blocks b ++ rows b ++ columns b)
+
+onlyFull :: [Square] -> [Int]
+onlyFull xs = map (\(Full x) -> x) (filter isFull xs)
+    where
+        isFull (Full _) = True
+        isFull _        = False
+
+noDuplicates :: Eq a => [a] -> Bool
+noDuplicates xs = xs == nub xs
