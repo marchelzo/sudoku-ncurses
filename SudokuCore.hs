@@ -37,6 +37,24 @@ shuffled = do n  <- randomRIO (300,1000)
                shuffle []     b = b
                shuffle (t:ts) b = shuffle ts (applyTransformation t b)
 
+removeSquares :: Int -> Board -> IO Board
+removeSquares 0 b = return b
+removeSquares n b = do [i,j] <- replicateM 2 (randomRIO (0,8))
+                       case valueAt i j b of
+                           Empty -> removeSquares n b
+                           _     -> removeSquares (n - 1) (insertAt i j Empty b)
+
+-- | function to generate a new Sudoku Puzzle with a unique solution
+newPuzzle :: IO Board
+newPuzzle = do s <- shuffled
+               removeMax s
+
+removeMax :: Board -> IO Board
+removeMax b = do b' <- removeSquares 1 b
+                 if numSolutions b' > 1
+                 then return b
+                 else removeMax b'
+
 applyTransformation :: Transformation -> Board -> Board
 applyTransformation t b = case t of
                               ReflectMajor -> reflectMajor b
@@ -98,6 +116,7 @@ rows (Board b) = b
 blocks :: Board -> [[Square]]
 blocks (Board b) = (concat . map rows2blocks . groupsOfThree) b
 
+sublist :: Int -> Int -> [a] -> [a]
 sublist j k xs = take (k - j + 1) (drop j xs)
 
 groupsOfThree :: [a] -> [(a,a,a)]
@@ -150,7 +169,7 @@ validMove i j n b =    x `notElem` block
         x     = Full n
 
 validState :: Board -> Bool
-validState b = all noDuplicates (blocks b ++ rows b ++ columns b)
+validState b = (all noDuplicates . map onlyFull) (blocks b ++ rows b ++ columns b)
 
 onlyFull :: [Square] -> [Int]
 onlyFull xs = map (\(Full x) -> x) (filter isFull xs)
@@ -160,3 +179,11 @@ onlyFull xs = map (\(Full x) -> x) (filter isFull xs)
 
 noDuplicates :: Eq a => [a] -> Bool
 noDuplicates xs = xs == nub xs
+
+numSolutions :: Board -> Int
+numSolutions b
+    | null (emptySquares b) = 1
+    | otherwise             = (sum . map numSolutions) newBoards
+        where
+            newBoards = [insertAt i j (Full x) b | x <- [1..9], validMove i j x b]
+            (i,j)     = head (emptySquares b)
