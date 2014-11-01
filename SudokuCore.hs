@@ -196,7 +196,7 @@ toString (Board b) = (unwords . concatMap (map sqToStr)) b
         sqToStr _        = "0"
 
 getPuzzle :: IO CString
-getPuzzle = do p <- newPuzzle
+getPuzzle = do p <- removeSquares 1 startingBoard
                newCString (toString p)
 
 foreign export ccall getPuzzle :: IO CString
