@@ -3,6 +3,7 @@ module SudokuCore where
 import System.Random
 import Control.Monad (replicateM)
 import Data.List (sort, transpose, nub)
+import Foreign.C
 
 data Square = Full Int | Empty deriving (Eq)
 
@@ -187,3 +188,15 @@ numSolutions b
         where
             newBoards = [insertAt i j (Full x) b | x <- [1..9], validMove i j x b]
             (i,j)     = head (emptySquares b)
+
+toString :: Board -> String
+toString (Board b) = (unwords . concatMap (map sqToStr)) b
+    where
+        sqToStr (Full x) = show x
+        sqToStr _        = "0"
+
+getPuzzle :: IO CString
+getPuzzle = do p <- newPuzzle
+               newCString (toString p)
+
+foreign export ccall getPuzzle :: IO CString
