@@ -1,4 +1,4 @@
-#include <ncurses.h>
+#include <curses.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -10,6 +10,8 @@
 #define RED_ON (attron(COLOR_PAIR(1)))
 #define BLACK_ON (attron(COLOR_PAIR(2)))
 #define GREEN_ON (attron(COLOR_PAIR(3)))
+#define BLUE_ON (attron(COLOR_PAIR(4)))
+#define MAGENTA_ON (attron(COLOR_PAIR(5)))
 
 typedef enum { RO, RW } SqType;
 
@@ -93,6 +95,8 @@ void curses_init(void)
     init_pair(1, COLOR_RED, -1);
     init_pair(2, COLOR_BLACK, -1);
     init_pair(3, COLOR_GREEN, -1);
+    init_pair(4, COLOR_BLUE, -1);
+    init_pair(5, COLOR_MAGENTA, -1);
 }
 
 Puzzle *parsePuzzle(char *pString)
@@ -153,11 +157,13 @@ void displayPuzzle(Puzzle *p)
                 if (p->sqs[9*i + j].type == RO)
                     RED_ON;
                 else
-                    BLACK_ON;
+                    MAGENTA_ON;
             } else {
                 GREEN_ON;
             }
-            mvprintw(1 + i + (i/3), 1 + j*2 + (j/3) * 2 , "%c%s", c, sep);
+            mvaddch(1 + i + (i/3), 1 + j*2 + (j/3) * 2 , c);
+            BLUE_ON;
+            mvaddstr(1 + i + (i/3), 2 + j*2 + (j/3) * 2, sep);
         }
         if (i == 2 || i == 5)
             mvaddstr(1 + i + (i+1) / 3, 1, "----------------------");
